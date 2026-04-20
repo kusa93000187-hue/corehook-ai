@@ -1,0 +1,13 @@
+{
+  "name": "corehook-ai",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.37.0",
+    "dotenv": "^16.4.0",
+    "express": "^4.19.0"
+  }
+}

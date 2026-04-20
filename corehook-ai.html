@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CoreHook AI — 7日間SNS投稿自動生成</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #F4F7F2;
+      --surface:  #FFFFFF;
+      --gold:     #D4AF37;
+      --gold-lt:  #F0E0A0;
+      --text:     #2C2C2C;
+      --muted:    #7A8A7A;
+      --border:   #DDE5D8;
+      --radius:   14px;
+      --shadow:   0 2px 16px rgba(0,0,0,.07);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Helvetica Neue', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+      min-height: 100vh;
+      padding: 0 0 80px;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 28px 24px 22px;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow);
+    }
+    header h1 {
+      font-size: 1.55rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      color: var(--text);
+    }
+    header h1 span { color: var(--gold); }
+    header p {
+      margin-top: 6px;
+      font-size: .8rem;
+      color: var(--muted);
+      letter-spacing: .04em;
+    }
+    .ai-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 8px;
+      padding: 3px 10px;
+      background: linear-gradient(135deg, #f5e97a22, #D4AF3722);
+      border: 1px solid #D4AF3744;
+      border-radius: 20px;
+      font-size: .7rem;
+      color: #9A7A10;
+      font-weight: 600;
+      letter-spacing: .06em;
+    }
+
+    /* ── Main layout ── */
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 40px 20px 0;
+    }
+
+    /* ── Input card ── */
+    .input-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 36px 32px;
+      box-shadow: var(--shadow);
+    }
+    .input-card h2 {
+      font-size: .85rem;
+      font-weight: 600;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 24px;
+    }
+    .field { margin-bottom: 22px; }
+    .field label {
+      display: block;
+      font-size: .78rem;
+      font-weight: 600;
+      letter-spacing: .06em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .field input,
+    .field textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: .92rem;
+      color: var(--text);
+      font-family: inherit;
+      transition: border-color .2s;
+      resize: vertical;
+    }
+    .field input:focus,
+    .field textarea:focus { outline: none; border-color: var(--gold); }
+    .field textarea { min-height: 72px; }
+
+    .btn-generate {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 15px;
+      background: var(--gold);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: opacity .2s, transform .15s;
+      font-family: inherit;
+    }
+    .btn-generate:hover { opacity: .88; transform: translateY(-1px); }
+    .btn-generate:active { transform: translateY(0); }
+    .btn-generate:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    /* ── Progress bar ── */
+    .progress-wrap {
+      margin-top: 16px;
+      display: none;
+    }
+    .progress-bar-bg {
+      width: 100%;
+      height: 4px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold-lt), var(--gold));
+      border-radius: 4px;
+      width: 0%;
+      transition: width .4s ease;
+    }
+    .progress-label {
+      margin-top: 8px;
+      font-size: .76rem;
+      color: var(--muted);
+      text-align: center;
+      letter-spacing: .04em;
+      min-height: 1.2em;
+    }
+
+    /* ── Results ── */
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 44px 0 20px;
+    }
+    .results-header h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+    }
+    .results-header span { font-size: .78rem; color: var(--muted); }
+
+    /* ── Day cards ── */
+    .day-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 18px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      animation: fadeUp .35s ease both;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .day-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .day-meta { display: flex; align-items: center; gap: 12px; }
+    .day-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--gold-lt);
+      color: #9A7A10;
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: .04em;
+      flex-shrink: 0;
+    }
+    .day-title { font-size: .95rem; font-weight: 700; }
+    .day-type {
+      font-size: .73rem;
+      color: var(--muted);
+      letter-spacing: .06em;
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .btn-copy {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 7px 14px;
+      background: transparent;
+      border: 1.5px solid var(--gold);
+      border-radius: 7px;
+      color: var(--gold);
+      font-size: .75rem;
+      font-weight: 600;
+      letter-spacing: .05em;
+      cursor: pointer;
+      transition: background .18s, color .18s;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    .btn-copy:hover { background: var(--gold); color: #fff; }
+    .btn-copy.copied { background: #4CAF82; border-color: #4CAF82; color: #fff; }
+
+    .day-body { padding: 22px 22px 26px; }
+    .post-text {
+      font-size: .92rem;
+      line-height: 1.85;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+      min-height: 2em;
+    }
+
+    /* Streaming cursor */
+    .post-text.streaming::after {
+      content: '▌';
+      display: inline-block;
+      animation: blink .7s steps(1) infinite;
+      color: var(--gold);
+      font-size: .85em;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    /* ── Skeleton loader ── */
+    .skeleton {
+      background: linear-gradient(90deg, var(--border) 25%, #e8ede5 50%, var(--border) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.2s infinite;
+      border-radius: 4px;
+      height: 14px;
+      margin-bottom: 10px;
+    }
+    .skeleton:last-child { width: 60%; }
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ── Error state ── */
+    .error-banner {
+      background: #FEF2F2;
+      border: 1px solid #FCA5A5;
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-size: .85rem;
+      color: #B91C1C;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 60px;
+      font-size: .72rem;
+      color: var(--muted);
+      letter-spacing: .04em;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Core<span>Hook</span> AI</h1>
+  <p>7日間 SNS投稿 自動生成ツール — for Online Business Owners</p>
+  <div class="ai-badge">
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    Powered by Claude AI
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Input -->
+  <div class="input-card">
+    <h2>✦ 情報を入力</h2>
+
+    <div class="field">
+      <label>ターゲット（誰の悩みを解決するか）</label>
+      <textarea id="inp-target" placeholder="例：副業で月収を伸ばしたいが、SNS発信が続かない会社員"></textarea>
+    </div>
+
+    <div class="field">
+      <label>サービス名・独自の強み（USP）</label>
+      <input id="inp-service" type="text" placeholder="例：SNS自動化コンサル『PostFly』— AIで毎日投稿を5分で完結" />
+    </div>
+
+    <div class="field">
+      <label>ターゲットが抱えている「間違った常識」</label>
+      <textarea id="inp-myth" placeholder="例：毎日自力でネタを考えてコツコツ投稿しないとフォロワーは増えない"></textarea>
+    </div>
+
+    <button class="btn-generate" id="btn-gen" onclick="generate()">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      7日間の投稿をAI生成する
+    </button>
+
+    <div class="progress-wrap" id="progress-wrap">
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-fill"></div></div>
+      <div class="progress-label" id="progress-label"></div>
+    </div>
+  </div>
+
+  <div id="error-banner" class="error-banner"></div>
+
+  <!-- Results -->
+  <div id="results-wrap" style="display:none">
+    <div class="results-header">
+      <h2>生成された7日間の投稿</h2>
+      <span id="results-meta"></span>
+    </div>
+    <div id="results"></div>
+  </div>
+
+  <footer>CoreHook AI &nbsp;·&nbsp; Claude AI (claude-opus-4-7) &nbsp;·&nbsp; © 2025</footer>
+</div>
+
+<script>
+  const DAY_META = [
+    { label: 'DAY 1', type: '常識破壊',    day: 1 },
+    { label: 'DAY 2', type: '教育',         day: 2 },
+    { label: 'DAY 3', type: '解決策の提示', day: 3 },
+    { label: 'DAY 4', type: '権威・実績',   day: 4 },
+    { label: 'DAY 5', type: '共感・寄り添い', day: 5 },
+    { label: 'DAY 6', type: '希少性・緊急性', day: 6 },
+    { label: 'DAY 7', type: 'CTA・誘導',    day: 7 },
+  ];
+
+  // ── Generate ───────────────────────────────────────────────────────────────
+  async function generate() {
+    const target  = document.getElementById('inp-target').value.trim();
+    const service = document.getElementById('inp-service').value.trim();
+    const myth    = document.getElementById('inp-myth').value.trim();
+
+    if (!target || !service || !myth) {
+      shake(document.querySelector('.input-card'));
+      return;
+    }
+
+    const btn      = document.getElementById('btn-gen');
+    const progWrap = document.getElementById('progress-wrap');
+    const progFill = document.getElementById('progress-fill');
+    const progLabel= document.getElementById('progress-label');
+    const errBanner= document.getElementById('error-banner');
+    const wrap     = document.getElementById('results-wrap');
+    const cont     = document.getElementById('results');
+
+    errBanner.style.display = 'none';
+    btn.disabled = true;
+    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 生成中…`;
+    progWrap.style.display = 'block';
+    progFill.style.width = '0%';
+
+    // Build skeleton cards
+    wrap.style.display = 'block';
+    cont.innerHTML = '';
+    document.getElementById('results-meta').textContent = `ターゲット：${target.slice(0, 20)}…`;
+    DAY_META.forEach((d, i) => cont.appendChild(buildCard(d, i)));
+
+    // Generate sequentially (streaming per card)
+    for (let i = 0; i < DAY_META.length; i++) {
+      const d = DAY_META[i];
+      progLabel.textContent = `Day ${d.day} 「${d.type}」を生成中…`;
+      progFill.style.width = `${(i / DAY_META.length) * 100}%`;
+
+      const textEl = document.getElementById(`post-${i}`);
+      textEl.innerHTML = '';
+      textEl.classList.add('streaming');
+
+      try {
+        await streamDay({ target, service, myth, dayIndex: i }, (chunk) => {
+          textEl.textContent += chunk;
+        });
+      } catch (err) {
+        textEl.textContent = `⚠️ 生成に失敗しました: ${err.message}`;
+        showError(err.message);
+      }
+
+      textEl.classList.remove('streaming');
+      progFill.style.width = `${((i + 1) / DAY_META.length) * 100}%`;
+    }
+
+    progLabel.textContent = '✦ 全7日間の生成が完了しました';
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> 再生成する`;
+
+    wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ── Stream one day ─────────────────────────────────────────────────────────
+  async function streamDay(body, onChunk) {
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop(); // keep incomplete line
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const payload = line.slice(6);
+        if (payload === '[DONE]') return;
+        try {
+          const data = JSON.parse(payload);
+          if (data.error) throw new Error(data.error);
+          if (data.text) onChunk(data.text);
+        } catch (e) {
+          if (e.message !== 'Unexpected end of JSON input') throw e;
+        }
+      }
+    }
+  }
+
+  // ── Build card ─────────────────────────────────────────────────────────────
+  function buildCard(d, i) {
+    const card = document.createElement('div');
+    card.className = 'day-card';
+    card.style.animationDelay = `${i * 60}ms`;
+    card.innerHTML = `
+      <div class="day-header">
+        <div class="day-meta">
+          <div class="day-badge">${d.label}</div>
+          <div>
+            <div class="day-title">【${d.type}】</div>
+            <div class="day-type">Day ${d.day} of 7</div>
+          </div>
+        </div>
+        <button class="btn-copy" onclick="copyPost(this, ${i})">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          コピー
+        </button>
+      </div>
+      <div class="day-body">
+        <div class="post-text streaming" id="post-${i}">
+          <div class="skeleton"></div>
+          <div class="skeleton"></div>
+          <div class="skeleton"></div>
+          <div class="skeleton"></div>
+        </div>
+      </div>`;
+    return card;
+  }
+
+  // ── Copy ───────────────────────────────────────────────────────────────────
+  function copyPost(btn, idx) {
+    const text = document.getElementById(`post-${idx}`).textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      btn.classList.add('copied');
+      btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> コピー済み`;
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> コピー`;
+      }, 2000);
+    });
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function showError(msg) {
+    const el = document.getElementById('error-banner');
+    el.textContent = `⚠️ エラーが発生しました: ${msg}`;
+    el.style.display = 'block';
+  }
+
+  function shake(el) {
+    el.style.transition = 'transform .06s';
+    [0,8,-8,6,-6,3,-3,0].forEach((x, i) => {
+      setTimeout(() => el.style.transform = `translateX(${x}px)`, i * 55);
+    });
+    setTimeout(() => { el.style.transform = ''; el.style.transition = ''; }, 500);
+  }
+</script>
+</body>
+</html>
