@@ -63,8 +63,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = self.path.split("?")[0]
-        if path in ("/", "/corehook-ai.html"):
-            self._serve_file("corehook-ai.html", "text/html; charset=utf-8")
+        if path in ("/", "/index.html"):
+            self._serve_file("index.html", "text/html; charset=utf-8")
         else:
             self.send_error(404)
 
